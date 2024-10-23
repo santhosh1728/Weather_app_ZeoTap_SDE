@@ -5,7 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Weather App 🌤️</h1>
+        <form onsubmit="event.preventDefault(); getWeather();">
+            <label for="city">Enter city:</label>
+            <input type="text" id="city" name="city" required placeholder="e.g., New York">
+            <button type="submit">Get Weather</button>
+        </form>
+
+        <label for="chartType">Select Chart Type:</label>
+        <select id="chartType" onchange="updateChart()">
+            <option value="line">Line Chart</option>
+            <option value="bar">Bar Chart</option>
+            <option value="pie">Pie Chart</option>
+        </select>
+
+        <div id="charts-container">
+            <canvas id="temperatureChart"></canvas>
+        </div>
+
+        <div id="result"></div>
+        <button id="toggleDarkMode">Toggle Dark Mode</button>
+    </div>
+
     <script>
+        let temperatureChart, chartType = 'line';
+
         async function getWeather() {
             const city = document.getElementById('city').value;
             if (!city) {
@@ -25,18 +53,20 @@
             if (response.ok) {
                 let forecastHTML = '';
                 data.forecast.forEach(entry => {
+                    const emoji = getWeatherEmoji(entry.description);
                     forecastHTML += `
                         <div class="forecast-entry">
-                            <h3>${entry.date}</h3>
+                            <h3>${entry.date} ${emoji}</h3>
                             <p>Temperature: ${entry.temperature} °C</p>
                             <p>Description: ${entry.description}</p>
                         </div>
                     `;
                 });
 
+                const currentEmoji = getWeatherEmoji(data.current.description);
                 document.getElementById('result').innerHTML = `
                     <div class="weather-summary">
-                        <h2>Weather in ${data.city}</h2>
+                        <h2>Weather in ${data.city} ${currentEmoji}</h2>
                         <p>Current Temperature: ${data.current.temperature} °C</p>
                         <p>Description: ${data.current.description}</p>
                         <p>Humidity: ${data.current.humidity} %</p>
@@ -45,21 +75,120 @@
                     <h2>Forecast</h2>
                     ${forecastHTML}
                 `;
+
+                // Render temperature chart
+                renderCharts(data);
             } else {
                 document.getElementById('result').innerHTML = `<p class="error">${data.error}</p>`;
             }
         }
+
+        function getWeatherEmoji(description) {
+            switch (true) {
+                case /clear/i.test(description):
+                    return '☀️';
+                case /cloudy/i.test(description):
+                    return '☁️';
+                case /rain/i.test(description):
+                    return '🌧️';
+                case /snow/i.test(description):
+                    return '❄️';
+                case /storm/i.test(description):
+                    return '⛈️';
+                case /fog/i.test(description):
+                    return '🌫️';
+                default:
+                    return '🌈';
+            }
+        }
+
+        function renderCharts(data) {
+            const labels = data.forecast.map(entry => entry.date);
+            const temperatures = data.forecast.map(entry => entry.temperature);
+
+            // Temperature Chart
+            const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+            temperatureChart = new Chart(tempCtx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: temperatures,
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)', // Semi-transparent red
+                        borderColor: 'rgba(255, 99, 132, 1)', // Red
+                        borderWidth: 4,
+                        tension: 0.4, // Smooth lines for line chart
+                        pointRadius: 6,
+                        pointBackgroundColor: 'rgba(255, 255, 255, 1)', // White points
+                        pointBorderColor: '#000', // Black borders
+                    }]
+                },
+                options: getChartOptions('Temperature (°C)')
+            });
+        }
+
+        function updateChart() {
+            const newChartType = document.getElementById('chartType').value;
+            chartType = newChartType;
+
+            // Destroy existing chart
+            temperatureChart.destroy();
+
+            // Render chart with new type
+            renderCharts();
+        }
+
+        function getChartOptions(yLabel) {
+            return {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: yLabel,
+                            color: '#fff',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            color: '#fff',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#fff',
+                        borderWidth: 1,
+                        padding: 10
+                    }
+                }
+            };
+        }
+
+        document.getElementById('toggleDarkMode').onclick = function() {
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+
+            // Change button text based on dark mode state
+            this.textContent = isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        };
     </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Weather App</h1>
-        <form onsubmit="event.preventDefault(); getWeather();">
-            <label for="city">Enter city:</label>
-            <input type="text" id="city" name="city" required>
-            <button type="submit">Get Weather</button>
-        </form>
-        <div id="result"></div>
-    </div>
 </body>
 </html>

@@ -12,7 +12,7 @@ def send_email_alert(city, condition, temp):
     # Replace with your SMTP server details
     smtp_server = 'smtp.your-email-provider.com'
     smtp_port = 587
-    smtp_user = 'neha7work@gamil.com'
+    smtp_user = 'neha7work@gmail.com'
     smtp_password = 'neha0724@@'
 
     try:
